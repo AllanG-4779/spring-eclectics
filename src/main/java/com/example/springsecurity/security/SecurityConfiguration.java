@@ -1,5 +1,6 @@
 package com.example.springsecurity.security;
 
+import com.example.springsecurity.filter.JwtFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,12 +8,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @EnableWebSecurity
 @Configuration
@@ -23,6 +27,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     private UserDetailsService customUserDetailsService;
     @Autowired
     private PasswordConfig passwordConfig;
+    @Autowired
+    private JwtFilter jwtFilter;
+
 
 //    @Override
 //    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
@@ -37,11 +44,13 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         logger.info("Attempting to authenticate user");
         http
                 .cors().and().csrf().disable()
-                .authorizeRequests().antMatchers("/auth/reg", "/roles/add").permitAll()
+                .authorizeRequests().antMatchers("/generate","/auth/reg").permitAll()
                 .antMatchers("/roles/add").hasAuthority("ADMIN")
                 .antMatchers("/").hasAnyAuthority("USER", "ADMIN")
-                .anyRequest().authenticated()
-                .and().httpBasic();
+                .anyRequest().authenticated().and()
+                .exceptionHandling().and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
 
     }
 
@@ -52,7 +61,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     }
 @Bean
-    AuthenticationProvider authenticationProvider(){
+   public  AuthenticationProvider authenticationProvider(){
 
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 
@@ -64,7 +73,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     }
     @Bean
- public AuthenticationManager authenticationManager()throws Exception{
+    @Override
+ public AuthenticationManager authenticationManagerBean()throws Exception{
 
         return super.authenticationManagerBean();
 
